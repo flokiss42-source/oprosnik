@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Weber · Опросник</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0B0E17;
+  --bg2:       #111521;
+  --card:      #161B2E;
+  --card2:     #1C2338;
+  --border:    rgba(255,255,255,0.07);
+  --blue:      #4B7CF3;
+  --blue2:     #3563E9;
+  --blue-glow: rgba(75,124,243,0.25);
+  --green:     #22C55E;
+  --green-dim: rgba(34,197,94,0.15);
+  --red:       #EF4444;
+  --red-dim:   rgba(239,68,68,0.15);
+  --amber:     #F59E0B;
+  --text:      #E8EAF0;
+  --muted:     #6B7A99;
+  --muted2:    #4A5568;
+  --radius:    14px;
+  --radius-sm: 8px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'Sora', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+  overflow-x: hidden;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 16px; }
+
+/* ── HEADER ── */
+.header {
+  padding: 24px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(75,124,243,0.12);
+  border: 1px solid rgba(75,124,243,0.25);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+.header-badge::before { content: ''; width:6px; height:6px; background:var(--blue); border-radius:50%; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+.header h1 { font-size: 22px; font-weight: 800; line-height: 1.2; }
+.header h1 span { color: var(--blue); }
+.header p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 6px; }
+
+/* ── PROGRESS ── */
+.progress-wrap { margin-bottom: 20px; }
+.progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.progress-meta span { font-size: 12px; color: var(--muted); font-weight: 500; }
+.progress-meta strong { font-size: 12px; color: var(--blue); font-weight: 700; }
+.progress-track {
+  height: 4px;
+  background: var(--card2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--blue2), #7BB3FF);
+  transition: width .5s cubic-bezier(.23,1,.32,1);
+  box-shadow: 0 0 12px var(--blue-glow);
+}
+
+/* ── PAGES ── */
+.page { display: none; }
+.page.active { display: block; animation: fadeUp .35s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── CARD ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(75,124,243,0.3), transparent);
+}
+
+/* ── Q BLOCK ── */
+.q-block { margin-bottom: 24px; }
+.q-block:last-child { margin-bottom: 0; }
+.q-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+.q-hint { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.req { color: var(--red); margin-left: 2px; }
+
+/* ── TEXT INPUT ── */
+.input-field {
+  width: 100%;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  padding: 12px 14px;
+  transition: border-color .2s, box-shadow .2s;
+  resize: none;
+}
+.input-field::placeholder { color: var(--muted2); }
+.input-field:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(75,124,243,0.12);
+}
+.input-field.error { border-color: var(--red); }
+textarea.input-field { min-height: 80px; }
+
+/* ── RADIO / CHECKBOX ITEMS ── */
+.option-list { display: flex; flex-direction: column; gap: 8px; }
+.option-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .2s;
+  font-size: 14px;
+  user-select: none;
+}
+.option-item:hover { border-color: var(--blue); background: rgba(75,124,243,0.06); }
+.option-item.sel {
+  border-color: var(--blue);
+  background: rgba(75,124,243,0.1);
+}
+.option-item.sel .option-dot { background: var(--blue); box-shadow: 0 0 8px var(--blue-glow); }
+.option-dot {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--muted2);
+  flex-shrink: 0;
+  transition: all .2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.option-item.sel .option-dot::after {
+  content: '';
+  width: 8px; height: 8px;
+  background: #fff;
+  border-radius: 50%;
+}
+.option-box {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  border: 2px solid var(--muted2);
+  flex-shrink: 0;
+  transition: all .2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.option-item.sel .option-box {
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 0 8px var(--blue-glow);
+}
+.option-item.sel .option-box::after {
+  content: '✓';
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── NPS ── */
+.nps-grid { display: grid; grid-template-columns: repeat(11,1fr); gap: 5px; }
+.nps-btn {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--bg2);
+  color: var(--muted);
+  font-family: 'Sora', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+}
+.nps-btn:hover { border-color: var(--blue); color: var(--blue); }
+.nps-btn.sel {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  box-shadow: 0 0 16px var(--blue-glow);
+}
+.nps-labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: var(--muted); }
+
+/* ── RATING TABLE ── */
+.rating-scroll { overflow-x: auto; margin: 0 -20px; padding: 0 20px 4px; }
+.rating-table { width: 100%; border-collapse: collapse; min-width: 300px; }
+.rating-table th {
+  padding: 8px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.rating-table th:first-child { text-align: left; color: var(--blue); font-size: 10px; letter-spacing:.06em; text-transform:uppercase; }
+.rating-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px;
+  color: var(--text);
+  vertical-align: middle;
+}
+.rating-table tr:last-child td { border-bottom: none; }
+.rating-table td:first-child { font-weight: 500; font-size: 12px; color: var(--muted); padding-right: 12px; }
+.r-cell { text-align: center; }
+.r-radio {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  transition: all .2s;
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted2);
+}
+.r-radio:hover { border-color: var(--blue); color: var(--blue); }
+.r-radio.sel {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  box-shadow: 0 0 10px var(--blue-glow);
+}
+
+/* ── ERROR ── */
+.err-msg {
+  font-size: 12px;
+  color: var(--red);
+  margin-top: 6px;
+  display: none;
+}
+.err-msg.show { display: block; }
+
+/* ── LANG SWITCH ── */
+.lang-switch { display: flex; gap: 8px; margin-bottom: 16px; }
+.lang-btn {
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all .2s;
+}
+.lang-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+/* ── BUTTONS ── */
+.btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+.btn {
+  padding: 13px 28px;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all .2s;
+  letter-spacing: .02em;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue2), var(--blue));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(75,124,243,0.35);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(75,124,243,0.5); }
+.btn-primary:active { transform: translateY(0); }
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+.btn-success {
+  background: linear-gradient(135deg, #16a34a, var(--green));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+}
+
+/* ── SUCCESS SCREEN ── */
+.success-wrap {
+  text-align: center;
+  padding: 40px 20px;
+}
+.success-icon {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: var(--green-dim);
+  border: 2px solid var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  margin: 0 auto 20px;
+  animation: popIn .5s cubic-bezier(.23,1,.32,1);
+}
+@keyframes popIn { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+.success-title { font-size: 22px; font-weight: 800; color: var(--green); margin-bottom: 8px; }
+.success-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+/* ── SENDING STATE ── */
+.sending-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(11,14,23,0.85);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(4px);
+}
+.sending-overlay.show { display: flex; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.sending-overlay p { font-size: 14px; color: var(--muted); }
+
+/* ── BOTTOM SAFE AREA ── */
+.safe-bottom { height: env(safe-area-inset-bottom, 0px); }
+</style>
+</head>
+<body>
+
+<!-- Sending overlay -->
+<div class="sending-overlay" id="sending-overlay">
+  <div class="spinner"></div>
+  <p>Отправляем ваши ответы...</p>
+</div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLang('ru')">Русский</button>
+      <button class="lang-btn" onclick="setLang('kz')">Қазақша</button>
+    </div>
+    <div class="header-badge">Smart Polymer · Weber</div>
+    <h1 id="h-title">Оценка <span>партнёрского</span> опыта</h1>
+    <p id="h-sub">Опрос займёт не более 2 минут и поможет нам стать лучше 🤝</p>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <span id="pg-label">Шаг 1 из 2</span>
+      <strong id="pg-pct">50%</strong>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill" style="width:50%"></div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 1 ══ -->
+  <div class="page active" id="page-1">
+
+    <!-- Partner info -->
+    <div class="card">
+      <div class="section-label">📋 Информация о партнёре</div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-company">Компания <span class="req">*</span></div>
+        <input class="input-field" id="f-company" type="text" placeholder="Название компании">
+        <div class="err-msg" id="err-company">Обязательное поле</div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-city">Город / Регион <span class="req">*</span></div>
+        <input class="input-field" id="f-city" type="text" placeholder="Например: Алматы">
+        <div class="err-msg" id="err-city">Обязательное поле</div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-phone">Телефон / WhatsApp</div>
+        <input class="input-field" id="f-phone" type="text" placeholder="+7 (___) ___-__-__">
+      </div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-exp">Стаж в оконном бизнесе <span class="req">*</span></div>
+        <div class="option-list" id="exp-list"></div>
+        <div class="err-msg" id="err-exp">Обязательное поле</div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-vol">Средний объём в месяц <span class="req">*</span></div>
+        <div class="option-list" id="vol-list"></div>
+        <div class="err-msg" id="err-vol">Обязательное поле</div>
+      </div>
+    </div>
+
+    <!-- NPS -->
+    <div class="card">
+      <div class="section-label">⭐ Рекомендация</div>
+      <div class="q-block">
+        <div class="q-label" id="q-nps">С какой вероятностью вы порекомендуете Weber? <span class="req">*</span></div>
+        <div class="nps-grid" id="nps-grid"></div>
+        <div class="nps-labels">
+          <span id="nps-low">0 — точно нет</span>
+          <span id="nps-high">10 — точно да</span>
+        </div>
+        <div class="err-msg" id="err-nps">Выберите оценку</div>
+      </div>
+    </div>
+
+    <!-- Weber ratings -->
+    <div class="card">
+      <div class="section-label">🏭 Оценка Weber</div>
+      <div class="q-hint" id="q3-hint">Оцените каждый параметр от 1 до 5 <span class="req">*</span></div>
+      <div class="rating-scroll">
+        <table class="rating-table" id="weber-table">
+          <thead>
+            <tr>
+              <th id="th-param">Параметр</th>
+              <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+            </tr>
+          </thead>
+          <tbody id="weber-tbody"></tbody>
+        </table>
+      </div>
+      <div class="err-msg" id="err-weber">Оцените все параметры</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goPage2()" id="btn-next">Далее →</button>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 2 ══ -->
+  <div class="page" id="page-2">
+
+    <!-- Reason -->
+    <div class="card">
+      <div class="section-label">💬 Причина оценки</div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-reason">Что стало главной причиной такой оценки? <span class="req">*</span></div>
+        <div class="q-hint" id="q-reason-hint">Можно коротко, 1–2 предложения</div>
+        <textarea class="input-field" id="f-reason" placeholder="Ваш ответ..."></textarea>
+        <div class="err-msg" id="err-reason">Обязательное поле</div>
+      </div>
+
+      <div class="q-block">
+        <div class="q-label" id="q-improve">Что мешает поставить 10 из 10?</div>
+        <textarea class="input-field" id="f-improve" placeholder="Даже небольшие детали важны..."></textarea>
+      </div>
+    </div>
+
+    <!-- Values -->
+    <div class="card">
+      <div class="section-label">🏆 Ценности Weber</div>
+      <div class="q-block">
+        <div class="q-label" id="q-value">Что самое ценное при выборе Weber? <span class="req">*</span></div>
+        <div class="q-hint" id="q-value-hint">Выберите не более 2 вариантов</div>
+        <div class="option-list" id="value-list"></div>
+        <div class="err-msg" id="err-value">Выберите хотя бы один вариант</div>
+      </div>
+    </div>
+
+    <!-- Smart Polymer ratings -->
+    <div class="card">
+      <div class="section-label">🏢 Оценка Smart Polymer</div>
+      <div class="q-hint" id="q6-hint">Оцените каждый параметр от 1 до 5 <span class="req">*</span></div>
+      <div class="rating-scroll">
+        <table class="rating-table" id="sp-table">
+          <thead>
+            <tr>
+              <th>Параметр</th>
+              <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+            </tr>
+          </thead>
+          <tbody id="sp-tbody"></tbody>
+        </table>
+      </div>
+      <div class="err-msg" id="err-sp">Оцените все параметры</div>
+    </div>
+
+    <!-- Strongest -->
+    <div class="card">
+      <div class="section-label">💪 Сильная сторона</div>
+      <div class="q-block">
+        <div class="q-label" id="q-strong">Что самое сильное в сервисе Smart Polymer? <span class="req">*</span></div>
+        <div class="option-list" id="strong-list"></div>
+        <div class="err-msg" id="err-strong">Выберите один вариант</div>
+      </div>
+
+      <div class="q-block" style="margin-top:20px;">
+        <div class="q-label" id="q-comp">С какими брендами сравниваете Weber?</div>
+        <input class="input-field" id="f-comp" type="text" placeholder="Например: Rehau, KBE...">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goPage1()" id="btn-back">← Назад</button>
+      <button class="btn btn-success" onclick="submitSurvey()" id="btn-submit">Отправить ✓</button>
+    </div>
+  </div>
+
+  <!-- ══ SUCCESS ══ -->
+  <div class="page" id="page-success">
+    <div class="card">
+      <div class="success-wrap">
+        <div class="success-icon">🤝</div>
+        <div class="success-title" id="succ-title">Спасибо!</div>
+        <p class="success-sub" id="succ-sub">Ваше мнение напрямую влияет на развитие сервиса Smart Polymer.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="safe-bottom"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  НАСТРОЙКИ
+// ════════════════════════════════════════
+
+// ⚠️ ЗАМЕНИТЕ на URL вашего Google Apps Script Web App
+const SHEETS_URL = "https://script.google.com/macros/s/ВАШ_DEPLOYMENT_ID/exec";
+
+// ════════════════════════════════════════
+//  TELEGRAM WEBAPP
+// ════════════════════════════════════════
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.BackButton.onClick(() => {
+    if (document.getElementById('page-2').classList.contains('active')) goPage1();
+  });
+}
+
+// ════════════════════════════════════════
+//  ПЕРЕВОДЫ
+// ════════════════════════════════════════
+const T = {
+  ru: {
+    hTitle: 'Оценка <span>партнёрского</span> опыта',
+    hSub: 'Опрос займёт не более 2 минут и поможет нам стать лучше 🤝',
+    pg1: 'Шаг 1 из 2', pg2: 'Шаг 2 из 2',
+    exp: ['До 1 года', '1–3 года', '3–5 лет', 'Более 5 лет'],
+    vol: ['До 300 м²', '300–700 м²', '700–1500 м²', '1500+ м²'],
+    npsLow: '0 — точно нет', npsHigh: '10 — точно да',
+    weberParams: ['Качество профиля','Стабильность поставок','Цена / ценность','Работа менеджера','Доставка','Общий уровень сервиса'],
+    valueOpts: ['Качество профиля','Цена','Наличие на складе','Сервис и поддержка','Скорость поставки','Репутация бренда','Пока не вижу ключевых преимуществ'],
+    spParams: ['Работа менеджеров','Скорость обработки заказов','Техническая поддержка','Консультации','Логистика','Решение спорных ситуаций'],
+    strongOpts: ['Профессионализм менеджеров','Техническая экспертиза','Скорость реакции','Удобство коммуникации','Доставка и логистика','Гибкость в работе','Бонусная система','Пока не вижу явных преимуществ'],
+    succTitle: 'Спасибо!',
+    succSub: 'Ваше мнение напрямую влияет на развитие сервиса Smart Polymer.',
+  },
+  kz: {
+    hTitle: '<span>Серіктестік</span> тәжірибесін бағалау',
+    hSub: 'Сауалнама 2 минуттан аспайды және сервисті жақсартуға көмектеседі 🤝',
+    pg1: '1-қадам / 2', pg2: '2-қадам / 2',
+    exp: ['1 жылға дейін', '1–3 жыл', '3–5 жыл', '5 жылдан астам'],
+    vol: ['300 м²-ге дейін', '300–700 м²', '700–1500 м²', '1500+ м²'],
+    npsLow: '0 — жоқ', npsHigh: '10 — иә',
+    weberParams: ['Профильдің сапасы','Жеткізу тұрақтылығы','Баға / құндылық','Менеджер жұмысы','Жеткізу','Жалпы сервис деңгейі'],
+    valueOpts: ['Профильдің сапасы','Баға','Қоймадағы бар','Сервис пен қолдау','Жеткізу жылдамдығы','Бренд беделі','Негізгі артықшылықтарды көрмеймін'],
+    spParams: ['Менеджерлер жұмысы','Тапсырыс өңдеу жылдамдығы','Техникалық қолдау','Консультациялар','Логистика','Даулы жағдайларды шешу'],
+    strongOpts: ['Менеджерлердің кәсібилігі','Техникалық сараптама','Жауап беру жылдамдығы','Байланыс ыңғайлылығы','Жеткізу мен логистика','Жұмыстағы икемділік','Бонустық жүйе','Айқын артықшылықтарды көрмеймін'],
+    succTitle: 'Рахмет!',
+    succSub: 'Пікіріңіз Smart Polymer сервисінің дамуына тікелей әсер етеді.',
+  }
+};
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let lang = 'ru';
+let npsVal = null;
+let weberRatings = new Array(6).fill(null);
+let spRatings    = new Array(6).fill(null);
+let expVal  = null;
+let volVal  = null;
+let strongVal = null;
+let valueChecked = [];
+
+// ════════════════════════════════════════
+//  BUILD LISTS
+// ════════════════════════════════════════
+function buildAll() {
+  buildRadioList('exp-list', T[lang].exp, 'exp', (i) => { expVal = i; });
+  buildRadioList('vol-list', T[lang].vol, 'vol', (i) => { volVal = i; });
+  buildNPS();
+  buildRatingTable('weber-tbody', T[lang].weberParams, weberRatings, 'w');
+  buildCheckList('value-list', T[lang].valueOpts);
+  buildRatingTable('sp-tbody', T[lang].spParams, spRatings, 'sp');
+  buildRadioList('strong-list', T[lang].strongOpts, 'strong', (i) => { strongVal = i; });
+  applyLangTexts();
+}
+
+function buildRadioList(id, opts, name, cb) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  opts.forEach((o, i) => {
+    const div = document.createElement('div');
+    div.className = 'option-item' + (
+      (name === 'exp' && expVal === i) ||
+      (name === 'vol' && volVal === i) ||
+      (name === 'strong' && strongVal === i) ? ' sel' : '');
+    div.innerHTML = `<div class="option-dot"></div><span>${o}</span>`;
+    div.onclick = () => {
+      el.querySelectorAll('.option-item').forEach(x => x.classList.remove('sel'));
+      div.classList.add('sel');
+      cb(i);
+      if (name==='exp') showErr('exp',false);
+      if (name==='vol') showErr('vol',false);
+      if (name==='strong') showErr('strong',false);
+    };
+    el.appendChild(div);
+  });
+}
+
+function buildCheckList(id, opts) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+  opts.forEach((o, i) => {
+    const div = document.createElement('div');
+    div.className = 'option-item' + (valueChecked.includes(i) ? ' sel' : '');
+    div.innerHTML = `<div class="option-box"></div><span>${o}</span>`;
+    div.onclick = () => {
+      if (div.classList.contains('sel')) {
+        div.classList.remove('sel');
+        valueChecked = valueChecked.filter(x => x !== i);
+      } else {
+        if (valueChecked.length >= 2) {
+          const first = valueChecked.shift();
+          el.querySelectorAll('.option-item')[first]?.classList.remove('sel');
+        }
+        div.classList.add('sel');
+        valueChecked.push(i);
+      }
+      showErr('value', false);
+    };
+    el.appendChild(div);
+  });
+}
+
+function buildNPS() {
+  const grid = document.getElementById('nps-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'nps-btn' + (npsVal === i ? ' sel' : '');
+    btn.textContent = i;
+    btn.onclick = () => {
+      npsVal = i;
+      grid.querySelectorAll('.nps-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      showErr('nps', false);
+    };
+    grid.appendChild(btn);
+  }
+}
+
+function buildRatingTable(tbodyId, params, arr, prefix) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '';
+  params.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    let cells = `<td>${p}</td>`;
+    for (let v = 1; v <= 5; v++) {
+      cells += `<td class="r-cell">
+        <div class="r-radio${arr[i]===v?' sel':''}" 
+             id="${prefix}-${i}-${v}"
+             onclick="selectRating('${prefix}',${i},${v})">
+          ${v}
+        </div>
+      </td>`;
+    }
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+function selectRating(prefix, row, val) {
+  const arr = prefix === 'w' ? weberRatings : spRatings;
+  arr[row] = val;
+  for (let v = 1; v <= 5; v++) {
+    const el = document.getElementById(`${prefix}-${row}-${v}`);
+    if (el) el.className = 'r-radio' + (v === val ? ' sel' : '');
+  }
+  const errId = prefix === 'w' ? 'err-weber' : 'err-sp';
+  if (arr.every(x => x !== null)) showErr(errId.replace('err-',''), false);
+}
+
+// ════════════════════════════════════════
+//  TRANSLATIONS
+// ════════════════════════════════════════
+function applyLangTexts() {
+  const L = T[lang];
+  document.getElementById('h-title').innerHTML = L.hTitle;
+  document.getElementById('h-sub').textContent = L.hSub;
+  document.getElementById('pg-label').textContent =
+    document.getElementById('page-2').classList.contains('active') ? L.pg2 : L.pg1;
+  document.getElementById('nps-low').textContent = L.npsLow;
+  document.getElementById('nps-high').textContent = L.npsHigh;
+  document.getElementById('succ-title').textContent = L.succTitle;
+  document.getElementById('succ-sub').textContent = L.succSub;
+}
+
+function setLang(l) {
+  lang = l;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn:${l==='ru'?'first':'last'}-child`).classList.add('active');
+  // Reset selections to rebuild with new lang
+  expVal = null; volVal = null; strongVal = null;
+  valueChecked = [];
+  weberRatings = new Array(6).fill(null);
+  spRatings    = new Array(6).fill(null);
+  npsVal = null;
+  buildAll();
+}
+
+// ════════════════════════════════════════
+//  VALIDATION & NAV
+// ════════════════════════════════════════
+function showErr(id, show) {
+  const el = document.getElementById('err-' + id);
+  if (el) show ? el.classList.add('show') : el.classList.remove('show');
+  const field = document.getElementById('f-' + id);
+  if (field) show ? field.classList.add('error') : field.classList.remove('error');
+}
+
+function goPage2() {
+  let ok = true;
+  if (!document.getElementById('f-company').value.trim()) { showErr('company',true); ok=false; }
+  if (!document.getElementById('f-city').value.trim())    { showErr('city',true); ok=false; }
+  if (expVal === null)  { showErr('exp',true); ok=false; }
+  if (volVal === null)  { showErr('vol',true); ok=false; }
+  if (npsVal === null)  { showErr('nps',true); ok=false; }
+  if (weberRatings.some(x=>x===null)) { showErr('weber',true); ok=false; }
+  if (!ok) { document.querySelector('.err-msg.show')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  document.getElementById('page-1').classList.remove('active');
+  document.getElementById('page-2').classList.add('active');
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('pg-label').textContent = T[lang].pg2;
+  document.getElementById('pg-pct').textContent = '100%';
+  if (tg) tg.BackButton.show();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function goPage1() {
+  document.getElementById('page-2').classList.remove('active');
+  document.getElementById('page-1').classList.add('active');
+  document.getElementById('progress-fill').style.width = '50%';
+  document.getElementById('pg-label').textContent = T[lang].pg1;
+  document.getElementById('pg-pct').textContent = '50%';
+  if (tg) tg.BackButton.hide();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ════════════════════════════════════════
+//  SUBMIT
+// ════════════════════════════════════════
+async function submitSurvey() {
+  let ok = true;
+  if (!document.getElementById('f-reason').value.trim()) { showErr('reason',true); ok=false; }
+  if (valueChecked.length === 0) { showErr('value',true); ok=false; }
+  if (spRatings.some(x=>x===null)) { showErr('sp',true); ok=false; }
+  if (strongVal === null) { showErr('strong',true); ok=false; }
+  if (!ok) { document.querySelector('.err-msg.show')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  const payload = {
+    timestamp:    new Date().toLocaleString('ru-KZ', {timeZone:'Asia/Almaty'}),
+    lang:         lang,
+    company:      document.getElementById('f-company').value.trim(),
+    city:         document.getElementById('f-city').value.trim(),
+    phone:        document.getElementById('f-phone').value.trim(),
+    experience:   T[lang].exp[expVal] || '',
+    volume:       T[lang].vol[volVal] || '',
+    nps:          npsVal,
+    // Weber ratings
+    weber_quality:    weberRatings[0],
+    weber_supply:     weberRatings[1],
+    weber_price:      weberRatings[2],
+    weber_manager:    weberRatings[3],
+    weber_delivery:   weberRatings[4],
+    weber_service:    weberRatings[5],
+    weber_avg:        (weberRatings.reduce((a,b)=>a+b,0)/6).toFixed(2),
+    // Feedback
+    reason:       document.getElementById('f-reason').value.trim(),
+    improve:      document.getElementById('f-improve').value.trim(),
+    // Values
+    values:       valueChecked.map(i=>T[lang].valueOpts[i]).join(', '),
+    // SP ratings
+    sp_managers:  spRatings[0],
+    sp_speed:     spRatings[1],
+    sp_tech:      spRatings[2],
+    sp_consult:   spRatings[3],
+    sp_logistics: spRatings[4],
+    sp_disputes:  spRatings[5],
+    sp_avg:       (spRatings.reduce((a,b)=>a+b,0)/6).toFixed(2),
+    // Misc
+    strongest:    T[lang].strongOpts[strongVal] || '',
+    competitors:  document.getElementById('f-comp').value.trim(),
+    // Telegram user info
+    tg_user:      tg?.initDataUnsafe?.user ? 
+                  `${tg.initDataUnsafe.user.first_name} ${tg.initDataUnsafe.user.last_name||''} (@${tg.initDataUnsafe.user.username||'—'})`.trim() : '—',
+  };
+
+  // Show sending overlay
+  document.getElementById('sending-overlay').classList.add('show');
+
+  try {
+    await fetch(SHEETS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn('Fetch error (no-cors expected):', e);
+  }
+
+  document.getElementById('sending-overlay').classList.remove('show');
+  document.getElementById('page-2').classList.remove('active');
+  document.getElementById('page-success').classList.add('active');
+  document.querySelector('.progress-wrap').style.display = 'none';
+  if (tg) { tg.BackButton.hide(); tg.HapticFeedback?.notificationOccurred('success'); }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+buildAll();
+</script>
+</body>
+</html>
